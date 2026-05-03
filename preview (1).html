@@ -1,0 +1,262 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+<meta charset="UTF-8">
+<title>Color Analytics PRO</title>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+<style>
+body {
+  margin: 0;
+  font-family: system-ui, Arial;
+  background: #0a0f1f;
+  color: #e5e7eb;
+}
+
+.header {
+  padding: 14px;
+  background: #0f172a;
+  font-weight: 600;
+  border-bottom: 1px solid #1f2937;
+  text-align: center;
+}
+
+.time {
+  text-align: center;
+  font-size: 13px;
+  color: #9ca3af;
+  margin-top: 8px;
+}
+
+.result {
+  font-size: 58px;
+  font-weight: 800;
+  text-align: center;
+  margin: 15px 0;
+}
+
+.red { color: #ef4444; }
+.black { color: #f8fafc; }
+.white { color: #9ca3af; }
+
+.grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 10px;
+  padding: 10px;
+}
+
+.card {
+  background: #111827;
+  border: 1px solid #1f2937;
+  border-radius: 14px;
+  padding: 14px;
+  text-align: center;
+}
+
+.title {
+  font-size: 12px;
+  color: #9ca3af;
+}
+
+.value {
+  font-size: 24px;
+  font-weight: 700;
+  margin-top: 6px;
+}
+
+#alerta {
+  text-align: center;
+  margin: 8px;
+  font-weight: 600;
+  color: #facc15;
+  min-height: 20px;
+}
+
+.chart-box {
+  margin: 12px;
+  background: #111827;
+  border-radius: 14px;
+  padding: 10px;
+  border: 1px solid #1f2937;
+}
+
+.history {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 6px;
+  padding: 10px;
+}
+
+.dot {
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+}
+.red-dot { background: #ef4444; }
+.black-dot { background: #ffffff; }
+.white-dot { background: #9ca3af; }
+</style>
+</head>
+
+<body>
+
+<div class="header">📊 Color Analytics PRO</div>
+
+<div class="time">
+📅 <span id="data"></span> | 🕒 <span id="hora"></span>
+</div>
+
+<div id="resultado" class="result">-</div>
+
+<div id="alerta"></div>
+
+<div class="grid">
+  <div class="card">
+    <div class="title">🔴 Vermelho</div>
+    <div class="value" id="v">0</div>
+  </div>
+
+  <div class="card">
+    <div class="title">⚫ Preto</div>
+    <div class="value" id="p">0</div>
+  </div>
+
+  <div class="card">
+    <div class="title">⚪ Branco</div>
+    <div class="value" id="b">0</div>
+  </div>
+</div>
+
+<div class="chart-box">
+  <canvas id="chart"></canvas>
+</div>
+
+<div class="history" id="history"></div>
+
+<script>
+let historico = [];
+
+let v = 0, p = 0, b = 0;
+
+const ctx = document.getElementById("chart").getContext("2d");
+
+const chart = new Chart(ctx, {
+  type: "line",
+  data: {
+    labels: [],
+    datasets: [
+      { label: "Vermelho %", data: [], borderColor: "#ef4444" },
+      { label: "Preto %", data: [], borderColor: "#ffffff" },
+      { label: "Branco %", data: [], borderColor: "#9ca3af" }
+    ]
+  }
+});
+
+// 🕒 relógio
+function clock() {
+  const d = new Date();
+  document.getElementById("data").innerText = d.toLocaleDateString("pt-BR");
+  document.getElementById("hora").innerText = d.toLocaleTimeString("pt-BR");
+}
+setInterval(clock, 1000);
+clock();
+
+// 🎲 gerar cores
+function gerar() {
+  const r = Math.random() * 100;
+
+  if (r < 49.5) return 1; // vermelho
+  if (r < 99) return 2;   // preto
+  return 0;               // branco
+}
+
+// 🎨 converter cor
+function corTexto(n) {
+  if (n === 1) return "VERMELHO";
+  if (n === 2) return "PRETO";
+  return "BRANCO";
+}
+
+// 🟢 atualizar
+function atualizar() {
+  const n = gerar();
+
+  historico.push(n);
+  if (historico.length > 100) historico.shift();
+
+  // reset contadores
+  v = p = b = 0;
+
+  historico.forEach(x => {
+    if (x === 1) v++;
+    else if (x === 2) p++;
+    else b++;
+  });
+
+  document.getElementById("v").innerText = v;
+  document.getElementById("p").innerText = p;
+  document.getElementById("b").innerText = b;
+
+  // resultado
+  const cor = corTexto(n);
+
+  const el = document.getElementById("resultado");
+  el.innerText = cor;
+
+  el.className =
+    n === 1 ? "result red" :
+    n === 2 ? "result black" : "result white";
+
+  // histórico visual
+  const hist = document.getElementById("history");
+
+  const dot = document.createElement("div");
+  dot.classList.add("dot");
+
+  if (n === 1) dot.classList.add("red-dot");
+  else if (n === 2) dot.classList.add("black-dot");
+  else dot.classList.add("white-dot");
+
+  hist.appendChild(dot);
+
+  if (hist.childNodes.length > 60) {
+    hist.removeChild(hist.firstChild);
+  }
+
+  // gráfico
+  const total = historico.length;
+
+  chart.data.labels.push(total);
+  chart.data.datasets[0].data.push((v/total)*100);
+  chart.data.datasets[1].data.push((p/total)*100);
+  chart.data.datasets[2].data.push((b/total)*100);
+
+  if (chart.data.labels.length > 50) {
+    chart.data.labels.shift();
+    chart.data.datasets.forEach(d => d.data.shift());
+  }
+
+  chart.update();
+
+  // alerta simples
+  const alerta = document.getElementById("alerta");
+
+  if (v > p && v > b) {
+    alerta.innerText = "📊 Dominância: Vermelho";
+  } else if (p > v && p > b) {
+    alerta.innerText = "📊 Dominância: Preto";
+  } else if (b > 5) {
+    alerta.innerText = "⚪ Branco aparecendo mais que o normal";
+  } else {
+    alerta.innerText = "";
+  }
+}
+
+setInterval(atualizar, 1200);
+</script>
+
+</body>
+</html>
